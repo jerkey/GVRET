@@ -980,6 +980,9 @@ void loop()
 			   break;
 		   case 4:
                            if (build_out_frame.id < BRIDGEFILTERSIZE) bridgeFilter[build_out_frame.id] = in_byte & 1;
+                           if (build_out_frame.id == 0xFFFFFFFF) { // set or clear entire array
+                             for (int i = 0; i < BRIDGEFILTERSIZE; i++) bridgeFilter[i] = in_byte & 1;
+                           }
                            state = IDLE;
                            toggleRXLED();
                            break;
