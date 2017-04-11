@@ -205,9 +205,12 @@ void setSWCANWakeup()
 	if (SysSettings.SWCANMode1Pin != 255) digitalWrite(SysSettings.SWCANMode1Pin, HIGH);
 }
 
+#define BRIDGEFILTERSIZE        2048
+static bool bridgeFilter[BRIDGEFILTERSIZE];
+
 void setup()
 {
-	//delay(5000); //just for testing. Don't use in production
+    for (int i=0; i < BRIDGEFILTERSIZE; i++) bridgeFilter[i] = true; // initialize array
     pinMode(BLINK_LED, OUTPUT);
     digitalWrite(ENABLE_PASS_0TO1_PIN, HIGH); // enable pull-up resistor
     digitalWrite(ENABLE_PASS_1TO0_PIN, HIGH); // enable pull-up resistor
@@ -518,7 +521,7 @@ void loop()
 	//{
 		if (Can0.available()) {
 			Can0.read(incoming);
-			if (digitalRead(ENABLE_PASS_0TO1_PIN)) Can1.sendFrame(incoming); // if pin is NOT shorted to GND
+			if (digitalRead(ENABLE_PASS_0TO1_PIN) && bridgeFilter[incoming.id]) Can1.sendFrame(incoming); // if pin is NOT shorted to GND
 			toggleRXLED();
 			if (isConnected) sendFrameToUSB(incoming, 0);
 			if (SysSettings.logToFile) sendFrameToFile(incoming, 0);
@@ -527,7 +530,7 @@ void loop()
 
 		if (Can1.available()) {
 			Can1.read(incoming); 
-			if (digitalRead(ENABLE_PASS_1TO0_PIN)) Can0.sendFrame(incoming); // if pin is NOT shorted to GND
+			if (digitalRead(ENABLE_PASS_1TO0_PIN) && bridgeFilter[incoming.id]) Can0.sendFrame(incoming); // if pin is NOT shorted to GND
 			toggleRXLED();
 			if (isConnected) sendFrameToUSB(incoming, 1);
 			if (SysSettings.logToFile) sendFrameToFile(incoming, 1);
