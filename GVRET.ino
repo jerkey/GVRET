@@ -677,6 +677,12 @@ void loop()
 			   buff[0] = 0xF1;
 			   step = 0;
 			   break;
+                   case 12:
+			   buff[0] = 0xF1; // first byte = GET_COMMAND
+			   buff[1] = 12; // second byte = SET_BRIDGEFILTER
+                           state = SET_BRIDGEFILTER;
+			   step = 0; // this is how we track the bytes swallowed by SET_BRIDGEFILTER
+                           break;
 		   }
 		   break;
 	   case BUILD_CAN_FRAME:
@@ -948,6 +954,35 @@ void loop()
 				   //}
 			   }
 			   break;
+		   }
+		   step++;
+		   break;
+	   case SET_BRIDGEFILTER:
+		   buff[1 + step] = in_byte; // swallow whatever byte we're receiving
+		   switch (step) {
+		   case 0:
+			   build_out_frame.id = in_byte;
+			   break;
+		   case 1:
+			   build_out_frame.id |= in_byte << 8;
+			   break;
+		   case 2:
+			   build_out_frame.id |= in_byte << 16;
+			   break;
+		   case 3:
+			   build_out_frame.id |= in_byte << 24;
+			   if (build_out_frame.id & 1 << 31) 
+			   {
+				   build_out_frame.id &= 0x7FFFFFFF;
+				   build_out_frame.extended = true;
+			   }
+			   else build_out_frame.extended = false;
+			   break;
+		   case 4:
+                           if (build_out_frame.id < BRIDGEFILTERSIZE) bridgeFilter[build_out_frame.id] = in_byte & 1;
+                           state = IDLE;
+                           toggleRXLED();
+                           break;
 		   }
 		   step++;
 		   break;
