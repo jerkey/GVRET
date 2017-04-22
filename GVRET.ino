@@ -212,8 +212,6 @@ void setup()
 {
     for (int i=0; i < BRIDGEFILTERSIZE; i++) bridgeFilter[i] = true; // initialize array
     pinMode(BLINK_LED, OUTPUT);
-    digitalWrite(ENABLE_PASS_0TO1_PIN, HIGH); // enable pull-up resistor
-    digitalWrite(ENABLE_PASS_1TO0_PIN, HIGH); // enable pull-up resistor
     digitalWrite(BLINK_LED, LOW);
 
 	Wire.begin();
@@ -299,10 +297,6 @@ void setup()
 	SysSettings.lawicelTimestamping = false;
 	SysSettings.lawicelPollCounter = 0;
 
-        SerialUSB.print("ENABLE_PASS_0TO1_PIN ");
-        SerialUSB.println((byte)digitalRead(ENABLE_PASS_0TO1_PIN));
-        SerialUSB.print("ENABLE_PASS_1TO0_PIN ");
-        SerialUSB.println((byte)digitalRead(ENABLE_PASS_1TO0_PIN));
 	SerialUSB.print("Done with init\n");
 	digitalWrite(BLINK_LED, HIGH);
 }
@@ -525,7 +519,7 @@ void loop()
 	//{
 		if (Can0.available()) {
 			Can0.read(incoming);
-			if (digitalRead(ENABLE_PASS_0TO1_PIN) && bridgeFilter[incoming.id]) Can1.sendFrame(incoming); // if pin is NOT shorted to GND
+			if (bridgeFilter[incoming.id]) Can1.sendFrame(incoming); // if pin is NOT shorted to GND
 			toggleRXLED();
 			if (isConnected) sendFrameToUSB(incoming, 0);
 			if (SysSettings.logToFile) sendFrameToFile(incoming, 0);
@@ -534,7 +528,7 @@ void loop()
 
 		if (Can1.available()) {
 			Can1.read(incoming); 
-			if (digitalRead(ENABLE_PASS_1TO0_PIN) && bridgeFilter[incoming.id]) Can0.sendFrame(incoming); // if pin is NOT shorted to GND
+			if (bridgeFilter[incoming.id]) Can0.sendFrame(incoming); // if pin is NOT shorted to GND
 			toggleRXLED();
 			if (isConnected) sendFrameToUSB(incoming, 1);
 			if (SysSettings.logToFile) sendFrameToFile(incoming, 1);
