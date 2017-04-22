@@ -299,6 +299,10 @@ void setup()
 	SysSettings.lawicelTimestamping = false;
 	SysSettings.lawicelPollCounter = 0;
 
+        SerialUSB.print("ENABLE_PASS_0TO1_PIN ");
+        SerialUSB.println((byte)digitalRead(ENABLE_PASS_0TO1_PIN));
+        SerialUSB.print("ENABLE_PASS_1TO0_PIN ");
+        SerialUSB.println((byte)digitalRead(ENABLE_PASS_1TO0_PIN));
 	SerialUSB.print("Done with init\n");
 	digitalWrite(BLINK_LED, HIGH);
 }
