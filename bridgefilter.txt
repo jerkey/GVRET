@@ -1,0 +1,15 @@
+so you'll open the serial port and send 0xF1, 0x0C, canID_LSB, canID_MSB, 0, 0, and then 1 or 0 depending on whether you want that ID to pass through
+
+i'm thinking more like start with
+grep "^BO_ " can2.dbc > can2.list
+and then make a script that enables only the IDs not commented out?  so you just edit the file with your favorite editor and run the script.
+i guess i need to add a serial function to clear or set the whole bridgefilter
+
+here's the command to set or clear the entire whitelist:
+https://github.com/jerkey/GVRET/commit/eb49725a34e7e44e2947d57dcd6bf186e8933876
+that is, to set or clear the whitelist, you send 0xF1, 0x0C, 0xFFFFFFFF, and then 1 or 0 depending on whether you want to set or clear the entire array
+
+clear all frames (as root if you already have the port open somewhere else):
+echo -e '\xF1\x0C\xff\xff\xff\xff\x00' > /dev/ttyACM0
+enable only CAN ID 0x408:
+echo -e '\xF1\x0C\x08\x04\x00\x00\x01' > /dev/ttyACM0
