@@ -969,12 +969,6 @@ void loop()
 			   break;
 		   case 3:
 			   build_out_frame.id |= in_byte << 24;
-			   if (build_out_frame.id & 1 << 31) 
-			   {
-				   build_out_frame.id &= 0x7FFFFFFF;
-				   build_out_frame.extended = true;
-			   }
-			   else build_out_frame.extended = false;
 			   break;
 		   case 4:
                            if (build_out_frame.id < BRIDGEFILTERSIZE) bridgeFilter[build_out_frame.id] = in_byte & 1;
