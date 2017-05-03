@@ -205,12 +205,13 @@ void setSWCANWakeup()
 	if (SysSettings.SWCANMode1Pin != 255) digitalWrite(SysSettings.SWCANMode1Pin, HIGH);
 }
 
+#define BRIDGEFILTERSIZE        2048
+static bool bridgeFilter[BRIDGEFILTERSIZE];
+
 void setup()
 {
-	//delay(5000); //just for testing. Don't use in production
+    for (int i=0; i < BRIDGEFILTERSIZE; i++) bridgeFilter[i] = true; // initialize array
     pinMode(BLINK_LED, OUTPUT);
-    digitalWrite(ENABLE_PASS_0TO1_PIN, HIGH); // enable pull-up resistor
-    digitalWrite(ENABLE_PASS_1TO0_PIN, HIGH); // enable pull-up resistor
     digitalWrite(BLINK_LED, LOW);
 
 	Wire.begin();
@@ -296,10 +297,6 @@ void setup()
 	SysSettings.lawicelTimestamping = false;
 	SysSettings.lawicelPollCounter = 0;
 
-        SerialUSB.print("ENABLE_PASS_0TO1_PIN ");
-        SerialUSB.println((byte)digitalRead(ENABLE_PASS_0TO1_PIN));
-        SerialUSB.print("ENABLE_PASS_1TO0_PIN ");
-        SerialUSB.println((byte)digitalRead(ENABLE_PASS_1TO0_PIN));
 	SerialUSB.print("Done with init\n");
 	digitalWrite(BLINK_LED, HIGH);
 }
@@ -522,7 +519,7 @@ void loop()
 	//{
 		if (Can0.available()) {
 			Can0.read(incoming);
-			if (digitalRead(ENABLE_PASS_0TO1_PIN)) Can1.sendFrame(incoming); // if pin is NOT shorted to GND
+			if (bridgeFilter[incoming.id]) Can1.sendFrame(incoming); // if pin is NOT shorted to GND
 			toggleRXLED();
 			if (isConnected) sendFrameToUSB(incoming, 0);
 			if (SysSettings.logToFile) sendFrameToFile(incoming, 0);
@@ -531,7 +528,7 @@ void loop()
 
 		if (Can1.available()) {
 			Can1.read(incoming); 
-			if (digitalRead(ENABLE_PASS_1TO0_PIN)) Can0.sendFrame(incoming); // if pin is NOT shorted to GND
+			if (bridgeFilter[incoming.id]) Can0.sendFrame(incoming); // if pin is NOT shorted to GND
 			toggleRXLED();
 			if (isConnected) sendFrameToUSB(incoming, 1);
 			if (SysSettings.logToFile) sendFrameToFile(incoming, 1);
@@ -678,6 +675,12 @@ void loop()
 			   buff[0] = 0xF1;
 			   step = 0;
 			   break;
+                   case 12:
+			   buff[0] = 0xF1; // first byte = GET_COMMAND
+			   buff[1] = 12; // second byte = SET_BRIDGEFILTER
+                           state = SET_BRIDGEFILTER;
+			   step = 0; // this is how we track the bytes swallowed by SET_BRIDGEFILTER
+                           break;
 		   }
 		   break;
 	   case BUILD_CAN_FRAME:
@@ -949,6 +952,32 @@ void loop()
 				   //}
 			   }
 			   break;
+		   }
+		   step++;
+		   break;
+	   case SET_BRIDGEFILTER:
+		   buff[1 + step] = in_byte; // swallow whatever byte we're receiving
+		   switch (step) {
+		   case 0:
+			   build_out_frame.id = in_byte;
+			   break;
+		   case 1:
+			   build_out_frame.id |= in_byte << 8;
+			   break;
+		   case 2:
+			   build_out_frame.id |= in_byte << 16;
+			   break;
+		   case 3:
+			   build_out_frame.id |= in_byte << 24;
+			   break;
+		   case 4:
+                           if (build_out_frame.id < BRIDGEFILTERSIZE) bridgeFilter[build_out_frame.id] = in_byte & 1;
+                           if (build_out_frame.id == 0xFFFFFFFF) { // set or clear entire array
+                             for (int i = 0; i < BRIDGEFILTERSIZE; i++) bridgeFilter[i] = in_byte & 1;
+                           }
+                           state = IDLE;
+                           toggleRXLED();
+                           break;
 		   }
 		   step++;
 		   break;
